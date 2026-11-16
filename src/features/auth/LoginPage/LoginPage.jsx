@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation.js";
 import { useEffect, useState } from "react";
 
-import { useQueryClient } from "@tanstack/react-query";
-
-import { googleLogin, login } from "@/services/authService.js";
-import { userKeys } from "@/services/queryKeys.js";
+import { googleLogin } from "@/services/authService.js";
 import { validateLogin } from "@/utils/validators.js";
 
 import { Logo } from "@/components/common/Logo";
@@ -16,6 +13,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AlertModal } from "@/components/ui/Modal/";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+
+import { useLogin } from "../hooks/useLogin.js";
 
 import * as styles from "./LoginPage.css.js";
 
@@ -27,13 +26,13 @@ const SOCIAL_ERROR_MESSAGES = {
 };
 
 export default function LoginPage() {
-  const queryClient = useQueryClient();
+  const { mutate, isPending, isSuccess } = useLogin();
+  const isBusy = isPending || isSuccess;
   const router = useRouter();
   const searchParams = useSearchParams();
   const socialError = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [fieldError, setFieldError] = useState({});
   const [loginError, setLoginError] = useState(() => {
     if (!socialError) {
@@ -48,7 +47,7 @@ export default function LoginPage() {
     }
   }, [socialError, router]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
 
     const errors = validateLogin({ email, password });
@@ -58,26 +57,23 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const { user } = await login({ email, password });
-      await queryClient.cancelQueries({ queryKey: userKeys.me() });
-      queryClient.setQueryData(userKeys.me(), user); //user 데이터를 캐시에 담는 과정
-
-      router.push("/marketplace"); //로그인 요청 성공 후 이동
-    } catch (error) {
-      setIsLoading(false); //중복요청 방지: 한번 보낸 요청이 실패해야 가입하기 버튼의 잠금이 풀림
-      if (error.code === "VALIDATION_FAILED") {
-        setFieldError(error.fieldErrors);
-        //여기 안에 들어가는 error.fieldErrors는 apiFetch가 던지는 에러로서
-        //미리 정해진 거임
-        //catch에서 꺼낸 error는 리턴문에선 쓸 수 없음 따라서 fieldError를 써야됨
-      } else if (error.code === "INVALID_CREDENTIALS") {
-        setLoginError(error.message);
-      } else {
-        setLoginError(error.status ? error.message : "네트워크 오류가 발생했습니다.");
-      }
-    }
+    mutate(
+      { email, password },
+      {
+        onError: (error) => {
+          if (error.code === "VALIDATION_FAILED") {
+            setFieldError(error.fieldErrors);
+            //여기 안에 들어가는 error.fieldErrors는 apiFetch가 던지는 에러로서
+            //미리 정해진 거임
+            //catch에서 꺼낸 error는 리턴문에선 쓸 수 없음 따라서 fieldError를 써야됨
+          } else if (error.code === "INVALID_CREDENTIALS") {
+            setLoginError(error.message);
+          } else {
+            setLoginError(error.status ? error.message : "네트워크 오류가 발생했습니다.");
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -116,7 +112,7 @@ export default function LoginPage() {
               type="submit"
               className={styles.loginBtn}
             >
-              {isLoading ? (
+              {isBusy ? (
                 <span role="status">
                   <span aria-hidden="true" className={styles.spinner} />
                   <span className={styles.srOnly}>로그인 중</span>
@@ -126,7 +122,7 @@ export default function LoginPage() {
               )}
             </Button>
             <Button
-              disabled={isLoading}
+              disabled={isBusy}
               fullWidth
               thickness="thin"
               type="button"
