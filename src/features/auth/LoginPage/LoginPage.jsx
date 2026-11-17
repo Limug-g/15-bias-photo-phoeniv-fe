@@ -15,6 +15,7 @@ import { AlertModal } from "@/components/ui/Modal/";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
 import { useLogin } from "../hooks/useLogin.js";
+import { parseAuthError } from "../utils/parseAuthError.js";
 
 import * as styles from "./LoginPage.css.js";
 
@@ -61,15 +62,11 @@ export default function LoginPage() {
       { email, password },
       {
         onError: (error) => {
-          if (error.code === "VALIDATION_FAILED") {
-            setFieldError(error.fieldErrors);
-            //여기 안에 들어가는 error.fieldErrors는 apiFetch가 던지는 에러로서
-            //미리 정해진 거임
-            //catch에서 꺼낸 error는 리턴문에선 쓸 수 없음 따라서 fieldError를 써야됨
-          } else if (error.code === "INVALID_CREDENTIALS") {
-            setLoginError(error.message);
+          const result = parseAuthError(error);
+          if (result.fieldErrors) {
+            setFieldError(result.fieldErrors);
           } else {
-            setLoginError(error.status ? error.message : "네트워크 오류가 발생했습니다.");
+            setLoginError(result.message);
           }
         },
       },
@@ -106,7 +103,7 @@ export default function LoginPage() {
           </div>
           <div className={styles.buttonContainer}>
             <Button
-              disabled={isLoading}
+              disabled={isBusy}
               fullWidth
               thickness="thin"
               type="submit"
