@@ -2,8 +2,7 @@
 
 import Image from "next/image.js";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation.js";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { googleLogin } from "@/services/authService.js";
 import { validateLogin } from "@/utils/validators.js";
@@ -15,38 +14,19 @@ import { AlertModal } from "@/components/ui/Modal/";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
 import { useLogin } from "../hooks/useLogin.js";
+import { useSocialLoginError } from "../hooks/useSocialLoginError.js";
 import { parseAuthError } from "../utils/parseAuthError.js";
 
 import * as styles from "./LoginPage.css.js";
 
-const SOCIAL_ERROR_MESSAGES = {
-  INVALID_SOCIAL_AUTH_STATE: "유효하지 않거나 만료된 소셜 로그인 요청입니다.",
-  SOCIAL_ACCOUNT_LINK_REQUIRED:
-    "구글 계정과 동일한 계정으로 가입되어있습니다.\n일반 로그인으로 진행하세요.",
-  SOCIAL_AUTH_FAILED: "구글 로그인에 실패했습니다. 다시 시도해 주세요.",
-};
-
 export default function LoginPage() {
   const { mutate, isPending, isSuccess } = useLogin();
   const isBusy = isPending || isSuccess;
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const socialError = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldError, setFieldError] = useState({});
-  const [loginError, setLoginError] = useState(() => {
-    if (!socialError) {
-      return "";
-    }
-    return SOCIAL_ERROR_MESSAGES[socialError] ?? "구글 로그인에 실패했습니다. 다시 시도해 주세요";
-  });
-
-  useEffect(() => {
-    if (socialError) {
-      router.replace("/login");
-    }
-  }, [socialError, router]);
+  const socialErrorMessage = useSocialLoginError();
+  const [loginError, setLoginError] = useState(socialErrorMessage);
 
   const handleSubmit = (event) => {
     event.preventDefault();
