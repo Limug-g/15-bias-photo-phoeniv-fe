@@ -43,3 +43,4 @@ next-env.d.ts
 
 # 개인 메모
 note/
+.DS_Store
