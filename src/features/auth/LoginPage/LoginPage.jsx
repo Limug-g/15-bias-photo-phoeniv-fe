@@ -86,7 +86,7 @@ export default function LoginPage() {
               error={errors.password?.message}
               label="비밀번호"
               placeholder="비밀번호를 입력해주세요"
-              {...register("password")}
+              {...register("password", { validate: passwordValidator })}
             />
           </div>
           <div className={styles.buttonContainer}>
