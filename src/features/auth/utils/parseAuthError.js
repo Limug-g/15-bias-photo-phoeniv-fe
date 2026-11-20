@@ -5,7 +5,7 @@
 export function parseAuthError(error) {
   if (error.code === "VALIDATION_FAILED") {
     const fieldErrors = Object.fromEntries(
-      Object.entries(error.fieldErrors).map(([name, msg]) => [name, [msg].flat()[0]]),
+      Object.entries(error.fieldErrors || {}).map(([name, msg]) => [name, [msg].flat()[0]]),
     );
     return { fieldErrors };
     //여기 안에 들어가는 error.fieldErrors는 apiFetch가 던지는 에러로서

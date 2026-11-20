@@ -57,7 +57,7 @@ export default function LoginPage() {
             //여기서 forEach()의 콜백함수 인자에 [name, message]를 넣은 건 위의 배열 형태를 구조분해하여 name, message 변수에 담는다는 의미다
             setError(name, {
               type: "server",
-              message: Array.isArray(msg) ? msg[0] : msg,
+              message: msg,
             });
           });
       },
