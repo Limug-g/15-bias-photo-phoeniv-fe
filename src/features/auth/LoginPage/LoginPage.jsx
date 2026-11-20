@@ -27,7 +27,7 @@ const DEFAULT_VALUES = {
 };
 
 export default function LoginPage() {
-  const { mutate, isPending, isSuccess } = useLogin();
+  const { mutate: loginMutate, isPending, isSuccess } = useLogin();
   const isBusy = isPending || isSuccess;
   const {
     register,
@@ -43,23 +43,23 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState(socialErrorMessage);
 
   const onSubmit = (data) => {
-    mutate(data, {
+    loginMutate(data, {
       onError: (error) => {
-        const result = parseAuthError(error);
-        if (result.fieldErrors) {
-          Object.entries(result.fieldErrors).forEach(([name, message]) => {
-            //Object.entries(obj) 는 객체를 [[객체키, 객체값]] 형태로 바꿔준다
-            //여기서 forEach()의 콜백함수 인자에 [name, message]를 넣은 건 위의 배열 형태를 구조분해하여 name, message 변수에 담는다는 의미다
-            if (name in DEFAULT_VALUES) {
-              setError(name, { type: "server", message: [message].flat()[0] });
-              //DEFAULT_VALUES 안의 키값이 들어오면 if문 실행
-              //폼에 있는 칸(DEFAULT_VALUES의 키)의 에러만 setError로 errors에 넣는다. 여기서 type은 나중에 서버에서 왔는지 확인용
-              //message가 [] 안에 값이 존재하기 때문에 위와 같은 형태로 작성
-            }
-          });
-        } else {
-          setLoginError(result.message);
+        const { fieldErrors, message } = parseAuthError(error);
+        if (!fieldErrors) {
+          setLoginError(message);
+          return;
         }
+        //Object.entries(obj) 는 객체를 [[객체키, 객체값]] 형태로 바꿔준다
+        Object.entries(fieldErrors)
+          .filter(([name]) => Object.hasOwn(DEFAULT_VALUES, name)) //fieldErrors 배열 안에 name만 꺼내서 필터링한다.
+          .forEach(([name, msg]) => {
+            //여기서 forEach()의 콜백함수 인자에 [name, message]를 넣은 건 위의 배열 형태를 구조분해하여 name, message 변수에 담는다는 의미다
+            setError(name, {
+              type: "server",
+              message: Array.isArray(msg) ? msg[0] : msg,
+            });
+          });
       },
     });
   };
