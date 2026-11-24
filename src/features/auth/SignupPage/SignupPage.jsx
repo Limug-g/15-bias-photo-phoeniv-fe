@@ -4,8 +4,16 @@ import Image from "next/image.js";
 import Link from "next/link";
 import { useState } from "react";
 
+import { useForm } from "react-hook-form";
+
 import { googleLogin } from "@/services/authService.js";
-import { validateSignup } from "@/utils/validators.js";
+import {
+  emailValidator,
+  nicknameValidator,
+  passwordConfirmValidator,
+  passwordValidator,
+  validateSignup,
+} from "@/utils/validators.js";
 
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/Button";
@@ -14,109 +22,86 @@ import { AlertModal } from "@/components/ui/Modal/index.js";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
 import { useSignup } from "../hooks/useSignup.js";
+import { parseAuthError } from "../utils/parseAuthError.js";
 
 import * as styles from "./SignupPage.css.js";
+
+const DEFAULT_VALUES = {
+  email: "",
+  nickname: "",
+  password: "",
+  passwordConfirm: "",
+};
 
 export default function SignupPage() {
   const { mutate: signupMutate, isPending, isSuccess } = useSignup();
   const isBusy = isPending || isSuccess;
-  const [email, setEmail] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [fieldError, setFieldError] = useState({});
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({ defaultValues: DEFAULT_VALUES });
   const [signupError, setSignupError] = useState("");
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
+  const onSubmit = (data) => {
     //서버와 통신 전에 입력값 검증을 미리 해서 errors 객체에 값이 있으면 서버로 요청을 보내지 않고
     //화면(FE)에서 바로 에러를 띄운다
-    const errors = validateSignup({ email, nickname, password, passwordConfirm });
-
-    setFieldError(errors);
-    if (Object.keys(errors).length !== 0) {
-      return;
-    }
-
-    signupMutate(
-      { email, nickname, password, passwordConfirm },
-      {
-        onError: (error) => {
-          //서버에서 보내는 에러코드가 있는지 판별
-          const isFieldErrorCode =
-            error.code === "VALIDATION_FAILED" ||
-            error.code === "EMAIL_DUPLICATE" ||
-            error.code === "NICKNAME_DUPLICATE";
-
-          //fieldErrors가 빈 객체인지 판별
-          const hasFieldErrors = Object.keys(error.fieldErrors ?? {}).length !== 0;
-
-          //fieldErrors가 빈 객체여도 error.message를 띄워주기 위해
-          if (isFieldErrorCode && hasFieldErrors) {
-            setFieldError(error.fieldErrors);
-          } else {
-            setSignupError(error.status ? error.message : "네트워크 오류가 발생했습니다.");
-          }
-        },
+    signupMutate(data, {
+      onError: (error) => {
+        const { fieldErrors, message } = parseAuthError(error);
+        if (!fieldErrors) {
+          setSignupError(message);
+          return;
+        }
+        Object.entries(fieldErrors)
+          .filter(([name]) => Object.hasOwn(DEFAULT_VALUES, name))
+          .forEach(([name, msg]) => {
+            setError(name, { type: "server", message: msg });
+          });
       },
-    );
+    });
   };
-
-  //onChange안에 들어갈 함수
-  const handleChange =
-    (field, setter, linkedFields = []) =>
-    (event) => {
-      setter(event.target.value);
-
-      //검증 후 재 입력할 때 해당 필드와 연관된 필드의 fieldError를 비워주는 역할
-      setFieldError((prev) => {
-        const next = { ...prev, [field]: "" };
-
-        linkedFields.forEach((linked) => {
-          next[linked] = "";
-        });
-        return next;
-      });
-    };
 
   return (
     <>
-      <form className={styles.container} onSubmit={handleSubmit}>
+      <form className={styles.container} onSubmit={handleSubmit(onSubmit)}>
         <div className={styles.signupContainer}>
           <Logo className={styles.logoSize} />
           <div className={styles.formContainer}>
             <Input
               disabled={isBusy}
-              error={fieldError.email}
+              error={errors.email?.message}
               label="이메일"
               placeholder="이메일을 입력해주세요"
-              value={email}
-              onChange={handleChange("email", setEmail)}
+              {...register("email", { validate: emailValidator })}
             />
             <Input
               disabled={isBusy}
-              error={fieldError.nickname}
+              error={errors.nickname?.message}
               label="닉네임"
               placeholder="닉네임을 입력해주세요"
-              value={nickname}
-              onChange={handleChange("nickname", setNickname)}
+              {...register("nickname", { validate: nicknameValidator })}
             />
             <PasswordInput
               disabled={isBusy}
-              error={fieldError.password}
+              error={errors.password?.message}
               label="비밀번호"
               placeholder="8자 이상 입력해주세요"
-              value={password}
-              onChange={handleChange("password", setPassword, ["passwordConfirm"])}
+              {...register("password", { validate: passwordValidator, deps: "passwordConfirm" })}
             />
             <PasswordInput
               disabled={isBusy}
-              error={fieldError.passwordConfirm}
+              error={errors.passwordConfirm?.message}
               label="비밀번호 확인"
               placeholder="비밀번호를 한번 더 입력해주세요"
-              value={passwordConfirm}
-              onChange={handleChange("passwordConfirm", setPasswordConfirm)}
+              {...register("passwordConfirm", {
+                validate: (value, formValues) =>
+                  passwordConfirmValidator({
+                    password: formValues.password,
+                    passwordConfirm: value,
+                  }),
+              })}
             />
           </div>
           <div className={styles.buttonContainer}>
