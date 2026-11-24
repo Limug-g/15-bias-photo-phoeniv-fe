@@ -47,6 +47,13 @@ export default function SignupPage() {
   const onSubmit = (data) => {
     //서버와 통신 전에 입력값 검증을 미리 해서 errors 객체에 값이 있으면 서버로 요청을 보내지 않고
     //화면(FE)에서 바로 에러를 띄운다
+
+    //FE에서 로그인 시 버튼이 비활성화되지만 키보드 접근 등이 가능하므로
+    //코드 차원에서 막아주는 방어코드가 필요 isBusy(대기 또는 성공)일 때 클릭되면 그냥 return
+    if (isBusy) {
+      return;
+    }
+
     signupMutate(data, {
       onError: (error) => {
         const { fieldErrors, message } = parseAuthError(error);
