@@ -12,7 +12,6 @@ import {
   nicknameValidator,
   passwordConfirmValidator,
   passwordValidator,
-  validateSignup,
 } from "@/utils/validators.js";
 
 import { Logo } from "@/components/common/Logo";

@@ -4,15 +4,15 @@
 const FIELD_ERROR_CODES = ["VALIDATION_FAILED", "EMAIL_DUPLICATE", "NICKNAME_DUPLICATE"];
 
 export function parseAuthError(error) {
-  const hasFieldErrors = Object.keys(error.fieldErrors ?? {}).length > 0;
+  const hasFieldErrors = Object.keys(error?.fieldErrors ?? {}).length > 0;
 
-  if (FIELD_ERROR_CODES.includes(error.code) && hasFieldErrors) {
+  if (FIELD_ERROR_CODES.includes(error?.code) && hasFieldErrors) {
     const fieldErrors = Object.fromEntries(
-      Object.entries(error.fieldErrors || {}).map(([name, msg]) => [name, [msg].flat()[0]]),
+      Object.entries(error?.fieldErrors || {}).map(([name, msg]) => [name, [msg].flat()[0]]),
     );
     return { fieldErrors };
     //여기 안에 들어가는 error.fieldErrors는 apiFetch가 던지는 에러로서
     //미리 정해진 거임
   }
-  return { message: error.status ? error.message : "네트워크 오류가 발생했습니다." };
+  return { message: error?.status ? error.message : "네트워크 오류가 발생했습니다." };
 }
